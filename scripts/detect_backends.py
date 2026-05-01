@@ -37,7 +37,28 @@ LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
 CODEX_AUTH_FILE = Path.home() / ".codex" / "auth.json"
 OPENCODE_CONFIG = Path.home() / ".config" / "opencode" / "opencode.json"
 GEMINI_ACCOUNTS_FILE = Path.home() / ".gemini" / "google_accounts.json"
+# Machine-local config (never committed to git) — overrides skill-level config.json
+LOCAL_CONFIG_FILE = Path.home() / ".config" / "claude-multi-agent" / "config.json"
+# Skill-level default config (committed, all backends enabled)
+DEFAULT_CONFIG_FILE = Path(__file__).resolve().parent.parent / "config.json"
 QUERY_TIMEOUT = 3
+
+
+def _load_disabled_backends() -> set[str]:
+    """
+    Return the set of backend kinds explicitly disabled on this machine.
+    Reads ~/.config/claude-multi-agent/config.json first (machine-local),
+    then falls back to the skill's config.json (repo default).
+    """
+    for path in (LOCAL_CONFIG_FILE, DEFAULT_CONFIG_FILE):
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                disabled = data.get("disabled_backends", [])
+                return set(disabled)
+            except (json.JSONDecodeError, OSError):
+                pass
+    return set()
 
 
 @dataclass
@@ -48,6 +69,7 @@ class Backend:
     models: list[str]  # loaded / configured model IDs
     base_url: str = "" # for local kind only
     note: str = ""     # reason available or not
+    disabled: bool = False  # True when explicitly turned off in config
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +268,8 @@ def _check_openrouter() -> Backend:
 
 def detect_all() -> list[Backend]:
     """Return detection results for every backend, available or not."""
-    return [
+    disabled = _load_disabled_backends()
+    backends = [
         _check_lmstudio(),
         _check_codex(),
         _check_kimi(),
@@ -254,6 +277,12 @@ def detect_all() -> list[Backend]:
         _check_anthropic(),
         _check_openrouter(),
     ]
+    for b in backends:
+        if b.kind in disabled:
+            b.available = False
+            b.disabled = True
+            b.note = f"disabled in config (was: {b.note})"
+    return backends
 
 
 def available_backends(backends: list[Backend] | None = None) -> list[Backend]:

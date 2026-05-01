@@ -46,6 +46,35 @@ Use each tool through its own authentication. Do not share, extract, or manage c
 | Gemini CLI | `gemini login` → `~/.gemini/oauth_creds.json` |
 | LM Studio | no auth needed (local HTTP) |
 
+## Per-machine backend configuration
+
+Disable specific backends on a per-machine basis without touching the committed code.
+
+**Machine-local config** (never committed): `~/.config/claude-multi-agent/config.json`
+
+```json
+{
+  "disabled_backends": ["kimi"],
+  "_comment": "Valid values: local, codex, kimi, gemini, anthropic, openrouter"
+}
+```
+
+**Skill-level default** (committed, all enabled): `<skill_root>/config.json`
+
+```json
+{
+  "disabled_backends": []
+}
+```
+
+The machine-local file takes precedence. Disabled backends are still detected but shown as `[DISABLED]` and skipped by auto-routing.
+
+To check which backends are active on the current machine:
+
+```bash
+python3 ~/.claude/skills/claude-orchestrated-multi-agent-skill-v2/scripts/detect_backends.py
+```
+
 ## Balance guidance
 
 | Agent | Natural lane |

@@ -1,0 +1,4 @@
+{
+  "disabled_backends": [],
+  "_comment": "To disable backends on this machine only, create ~/.config/claude-multi-agent/config.json with a disabled_backends list. Valid values: local, codex, kimi, gemini, anthropic, openrouter. This file is committed to git with all backends enabled."
+}
